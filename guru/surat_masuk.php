@@ -10,44 +10,42 @@ include '../partials/sidebar.php';
     <p>Kelola surat-surat dari orang tua/wali siswa</p>
 
     <div class="card-box">
-        <table width="100%" cellpadding="10">
+    <table class="table-modern">
+        <thead>
             <tr>
-                <th>Judul</th>
-                <th>Dari</th>
-                <th>Tanggal</th>
+                <th>Judul & Perihal</th>
+                <th>Tujuan Surat</th>
+                <th>Tanggal Keluar</th>
                 <th>Status</th>
-                <th>Aksi</th>
             </tr>
-
+        </thead>
+        <tbody>
             <?php
-            $q = mysqli_query($conn,"
-                SELECT sp.id, sp.judul, u.nama, sp.tanggal, sp.status, sp.isi
-                FROM surat_pribadi sp
-                INNER JOIN users u ON sp.id_orangtua = u.id
-                ORDER BY sp.id DESC
-            ");
-            
-            if(mysqli_num_rows($q) > 0) {
-                while($d=mysqli_fetch_assoc($q)){
-                    echo "
-                    <tr>
-                        <td>{$d['judul']}</td>
-                        <td>{$d['nama']}</td>
-                        <td>{$d['tanggal']}</td>
-                        <td>{$d['status']}</td>
-                        <td>
-                            <button type='button' class='btn btn-primary' onclick='lihatSuratMasuk(\"{$d['judul']}\", \"{$d['nama']}\", \"{$d['tanggal']}\", \"".htmlspecialchars($d['isi'])."\")'>
-                                <i class='fas fa-eye'></i> Lihat
-                            </button>
-                        </td>
-                    </tr>";
-                }
-            } else {
-                echo "<tr><td colspan='5' style='text-align:center; color:#999; padding:20px;'>Belum ada surat masuk</td></tr>";
-            }
+            $q = mysqli_query($conn, "SELECT * FROM surat_pribadi ORDER BY id DESC");
+            while ($d = mysqli_fetch_assoc($q)) {
+                // Tentukan class badge berdasarkan status
+                $statusClass = ($d['status'] == 'sent') ? 'status-sent' : 'status-draft';
+                $statusText = ($d['status'] == 'sent') ? 'Terkirim' : 'Draft';
             ?>
-        </table>
-    </div>
+                <tr>
+                    <td>
+                        <div style="font-weight: 600; color: #1e293b;"><?= $d['judul'] ?></div>
+                        <small style="color: #64748b;"><?= $d['nomor'] ?></small>
+                    </td>
+                    <td>
+                        <span style="color: #475569;"><i class="fas fa-user-circle mr-1"></i> <?= $d['nama'] ?></span>
+                    </td>
+                    <td>
+                        <span style="color: #64748b;"><i class="far fa-calendar-alt mr-1"></i> <?= $d['tanggal'] ?></span>
+                    </td>
+                    <td>
+                        <span class="badge-status <?= $statusClass ?>"><?= $statusText ?></span>
+                    </td>
+                </tr>
+            <?php } ?>
+        </tbody>
+    </table>
+</div>
 </div>
 
 <!-- MODAL LIHAT SURAT -->
@@ -122,6 +120,93 @@ include '../partials/sidebar.php';
 </div>
 
 <style>
+    /* Desain Tabel Modern */
+.table-modern {
+    border-collapse: separate;
+    border-spacing: 0 10px; /* Jarak antar baris */
+    width: 100%;
+}
+
+.table-modern th {
+    color: #64748b;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    padding: 15px 20px;
+    border: none;
+    text-align: left;
+}
+
+.table-modern tr {
+    transition: all 0.2s ease;
+}
+
+.table-modern td {
+    background: #fff;
+    padding: 15px 20px;
+    border-top: 1px solid #f1f5f9;
+    border-bottom: 1px solid #f1f5f9;
+    color: #1e293b;
+    font-size: 0.95rem;
+}
+
+/* Membuat sudut baris melengkung */
+.table-modern td:first-child {
+    border-left: 1px solid #f1f5f9;
+    border-top-left-radius: 12px;
+    border-bottom-left-radius: 12px;
+}
+
+.table-modern td:last-child {
+    border-right: 1px solid #f1f5f9;
+    border-top-right-radius: 12px;
+    border-bottom-right-radius: 12px;
+    text-align: center;
+}
+
+/* Efek Hover Baris */
+.table-modern tbody tr:hover td {
+    background: #f8faff;
+    border-color: #e2e8f0;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+/* Badge Status Sesuai Foto */
+.badge-status {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.status-sent { background: #ecfdf5; color: #059669; } /* Hijau */
+.status-draft { background: #fef3c7; color: #d97706; } /* Kuning */
+
+/* Desain Tombol Aksi */
+.action-btn {
+    width: 35px;
+    height: 35px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    border: none;
+    margin: 0 3px;
+    transition: 0.2s;
+    cursor: pointer;
+}
+
+.btn-send { background: #eff6ff; color: #3b82f6; }
+.btn-edit { background: #f0fdf4; color: #22c55e; }
+.btn-delete { background: #fef2f2; color: #ef4444; }
+
+.action-btn:hover {
+    transform: scale(1.1);
+    filter: brightness(0.95);
+}
+
 .surat {
     font-family: 'Times New Roman', serif;
     line-height: 1.4;
