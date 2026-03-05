@@ -19,8 +19,17 @@ if(isset($_GET['hapus'])){
 // Handle edit (tampilkan form edit jika diminta)
 if(isset($_GET['edit'])){
     $edit_id = intval($_GET['edit']);
-    $res = mysqli_query($conn, "SELECT u.*, g.posisi, g.mapel FROM users u LEFT JOIN guru g ON g.user_id = u.id WHERE u.id='$edit_id' AND u.role='guru'");
+    $res = mysqli_query($conn, "SELECT u.id, u.nama, u.email FROM users u WHERE u.id='$edit_id' AND u.role='guru'");
     $edit_data = mysqli_fetch_assoc($res);
+    
+    // Ambil semua posisi untuk guru ini
+    if($edit_data) {
+        $pos_res = mysqli_query($conn, "SELECT id, posisi, mapel FROM guru_posisi WHERE user_id='$edit_id' ORDER BY id ASC");
+        $edit_data['posisi_list'] = [];
+        while($p = mysqli_fetch_assoc($pos_res)) {
+            $edit_data['posisi_list'][] = $p;
+        }
+    }
 }
 
 // Handle update guru
@@ -28,8 +37,8 @@ if(isset($_POST['update_guru'])){
     $id = intval($_POST['id']);
     $nama = mysqli_real_escape_string($conn, $_POST['nama']);
     $email = mysqli_real_escape_string($conn, $_POST['email']);
-    $posisi = mysqli_real_escape_string($conn, $_POST['posisi'] ?? '');
-    $mapel = mysqli_real_escape_string($conn, $_POST['mapel'] ?? '');
+    $posisi_arr = $_POST['posisi'] ?? [];
+    $mapel_arr = $_POST['mapel'] ?? [];
 
     // Jika password diisi, update juga
     if(!empty($_POST['password'])){
@@ -40,16 +49,17 @@ if(isset($_POST['update_guru'])){
         $update = mysqli_query($conn, "UPDATE users SET nama='$nama', email='$email' WHERE id='$id' AND role='guru'");
     }
 
-    // Update tabel guru (posisi, mapel)
-    $update_guru = mysqli_query($conn, "SELECT id FROM guru WHERE user_id='$id'");
-    if(mysqli_num_rows($update_guru) > 0){
-        mysqli_query($conn, "UPDATE guru SET posisi='$posisi', mapel='$mapel' WHERE user_id='$id'");
-    } else {
-        // Jika belum ada catatan di tabel guru, buat satu
-        mysqli_query($conn, "INSERT INTO guru (user_id, nama, posisi, mapel) VALUES ('$id', '$nama', '$posisi', '$mapel')");
-    }
-
-    if($update){
+    // Hapus posisi lama, masukkan yang baru
+    if($update) {
+        mysqli_query($conn, "DELETE FROM guru_posisi WHERE user_id='$id'");
+        
+        foreach($posisi_arr as $idx => $posisi) {
+            $posisi = mysqli_real_escape_string($conn, $posisi);
+            $mapel = isset($mapel_arr[$idx]) ? mysqli_real_escape_string($conn, $mapel_arr[$idx]) : '';
+            if(!empty($posisi)) {
+                mysqli_query($conn, "INSERT INTO guru_posisi (user_id, posisi, mapel) VALUES ('$id', '$posisi', '$mapel')");
+            }
+        }
         header("Location: guru.php");
         exit;
     } else {
@@ -101,61 +111,79 @@ if(isset($_POST['tambah_guru'])){
 include '../partials/header.php';
 include '../partials/sidebar.php';
 ?>
-
 <div class="app-content">
-    <h2>👨‍🏫 Kelola Data Guru</h2>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <h2 style="font-weight: 800; color: #1e293b; margin: 0;">👨‍🏫 Kelola Data Guru</h2>
+        <button class="btn btn-primary" onclick="openModal()" style="border-radius: 12px; padding: 12px 24px; font-weight: 600; box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);">
+            <i class="fas fa-plus-circle mr-2"></i> Tambah Guru Baru
+        </button>
+    </div>
 
     <?php if(isset($success)): ?>
-        <div style="padding:15px; background:#d4edda; color:#155724; border-radius:5px; margin-bottom:20px;">
-            ✅ <?= $success ?>
+        <div style="padding:15px 20px; background:#ecfdf5; color:#059669; border-radius:12px; margin-bottom:25px; border-left: 5px solid #10b981; display:flex; align-items:center; gap:10px;">
+            <i class="fas fa-check-circle"></i> <?= $success ?>
         </div>
     <?php endif; ?>
 
-    <?php if(isset($error)): ?>
-        <div style="padding:15px; background:#f8d7da; color:#721c24; border-radius:5px; margin-bottom:20px;">
-            ❌ <?= $error ?>
-        </div>
-    <?php endif; ?>
-
-    <button class="btn btn-primary" onclick="openModal()">➕ Tambah Guru</button>
-
-    <table class="table">
-        <tr>
-            <th>Nama</th>
-            <th>Email</th>
-            <th>Posisi</th>
-            <th>Mapel</th>
-            <th>Aksi</th>
-        </tr>
-
-        <?php
-        $q = mysqli_query($conn,"SELECT u.*, g.posisi, g.mapel FROM users u LEFT JOIN guru g ON g.user_id = u.id WHERE u.role='guru' ORDER BY u.nama ASC");
-        if(mysqli_num_rows($q) > 0) {
-            while($d=mysqli_fetch_assoc($q)){
-        ?>
-        <tr>
-            <td><?= $d['nama'] ?></td>
-            <td><?= $d['email'] ?></td>
-            <td><?= htmlspecialchars($d['posisi'] ?? '') ?></td>
-            <td><?= htmlspecialchars($d['mapel'] ?? '') ?></td>
-            <td>
-                     <a href="#" class="btn btn-secondary btn-edit"
-                         data-id="<?= $d['id'] ?>"
-                         data-nama="<?= htmlspecialchars($d['nama']) ?>"
-                         data-email="<?= htmlspecialchars($d['email']) ?>"
-                         data-posisi="<?= htmlspecialchars($d['posisi'] ?? '') ?>"
-                         data-mapel="<?= htmlspecialchars($d['mapel'] ?? '') ?>"
-                     >Edit</a>
-                <a href="?hapus=<?= $d['id'] ?>" class="btn btn-danger" onclick="return confirm('Yakin ingin menghapus guru ini?')">Hapus</a>
-            </td>
-        </tr>
-        <?php 
-            }
-        } else {
-            echo "<tr><td colspan='4' style='text-align:center; color:#999;'>Belum ada guru</td></tr>";
-        }
-        ?>
-    </table>
+    <div class="table-container">
+        <table class="table-guru">
+            <thead>
+                <tr>
+                    <th>Profil Guru</th>
+                    <th>Kontak</th>
+                    <th>Posisi & Tugas</th>
+                    <th style="text-align: center;">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php
+                $q = mysqli_query($conn,"SELECT u.*, g.posisi, g.mapel FROM users u LEFT JOIN guru g ON g.user_id = u.id WHERE u.role='guru' ORDER BY u.nama ASC");
+                if(mysqli_num_rows($q) > 0) {
+                    while($d=mysqli_fetch_assoc($q)){
+                ?>
+                <tr>
+                    <td>
+                        <div style="font-weight: 700; color: #1e293b;"><?= $d['nama'] ?></div>
+                        <small style="color: #64748b;">ID Guru: #<?= $d['id'] ?></small>
+                    </td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 8px; color: #475569;">
+                            <i class="far fa-envelope" style="font-size: 0.8rem; color: #94a3b8;"></i>
+                            <?= $d['email'] ?>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge-posisi"><?= strtoupper($d['posisi'] ?? 'Belum Diatur') ?></span>
+                        <div style="margin-top: 5px; font-size: 0.85rem; color: #64748b;">
+                            <i class="fas fa-book-reader mr-1"></i> <?= $d['mapel'] ?: '-' ?>
+                        </div>
+                    </td>
+                    <td style="text-align: center;">
+                        <button class="btn-action btn-edit-guru btn-edit" 
+                            data-id="<?= $d['id'] ?>"
+                            data-nama="<?= htmlspecialchars($d['nama']) ?>"
+                            data-email="<?= htmlspecialchars($d['email']) ?>"
+                            data-posisi="<?= htmlspecialchars($d['posisi'] ?? '') ?>"
+                            data-mapel="<?= htmlspecialchars($d['mapel'] ?? '') ?>">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <a href="?hapus=<?= $d['id'] ?>" class="btn-action btn-delete-guru" onclick="return confirm('Yakin ingin menghapus guru ini?')">
+                            <i class="fas fa-trash-alt"></i> Hapus
+                        </a>
+                    </td>
+                </tr>
+                <?php 
+                    }
+                } else {
+                    echo "<tr><td colspan='4' style='text-align:center; padding:50px; color:#94a3b8;'>
+                            <i class='fas fa-user-slash' style='display:block; font-size:2rem; margin-bottom:10px;'></i>
+                            Belum ada data guru terdaftar
+                          </td></tr>";
+                }
+                ?>
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <!-- MODAL EDIT GURU (selalu ada, diisi lewat JS) -->
@@ -196,32 +224,7 @@ include '../partials/sidebar.php';
         </form>
     </div>
 </div>
-<script>
-document.getElementById('btnCancelEdit').addEventListener('click', function(){
-    const m = document.getElementById('modalEditGuru'); if(m) m.style.display='none';
-});
 
-// Buka modal dan isi data ketika tombol .btn-edit diklik
-document.querySelectorAll('.btn-edit').forEach(btn => {
-    btn.addEventListener('click', function(e){
-        e.preventDefault();
-        const id = btn.dataset.id || '';
-        const nama = btn.dataset.nama || '';
-        const email = btn.dataset.email || '';
-        const posisi = btn.dataset.posisi || '';
-        const mapel = btn.dataset.mapel || '';
-
-        document.getElementById('edit_id').value = id;
-        document.getElementById('edit_nama').value = nama;
-        document.getElementById('edit_email').value = email;
-        document.getElementById('edit_posisi').value = posisi;
-        document.getElementById('edit_mapel').value = mapel;
-
-        const modal = document.getElementById('modalEditGuru');
-        if(modal) modal.style.display = 'flex';
-    });
-});
-</script>
 
 <!-- MODAL TAMBAH GURU -->
 <div class="modal" id="modalTambahGuru">
@@ -268,117 +271,157 @@ document.querySelectorAll('.btn-edit').forEach(btn => {
 
 <style>
 /* Container Utama Modal */
-.modal {
-    display: none;
-    position: fixed;
-    inset: 0;
-    z-index: 1000;
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(8px); /* Efek blur di belakang modal */
-    padding: 20px;
+/* Card Container untuk Tabel */
+.app-content {
+    background: #f8fafc;
+    padding: 30px;
+    border-radius: 20px;
 }
 
-.modal.active {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    animation: fadeIn 0.3s ease-out;
-}
-
-/* Konten Modal (Kotak Putih) */
-.modal-content {
-    background: #ffffff;
-    padding: 2rem;
-    border-radius: 16px;
-    width: 100%;
-    max-width: 500px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    transform: scale(0.95);
-    transition: transform 0.3s ease;
-}
-
-.modal.active .modal-content {
-    transform: scale(1);
-    animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-/* Animasi */
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-@keyframes slideUp {
-    from { opacity: 0; transform: translateY(20px) scale(0.95); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
-}
-label {
-    display: block;
-    margin-top: 20px;
-    margin-bottom: 8px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: #64748b; /* Warna abu-abu kebiruan yang modern */
-    transition: color 0.3s ease;
-}
-
-/* Bonus: Styling Input agar senada */
-input, select, textarea {
-    width: 100%;
-    padding: 10px 14px;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    outline: none;
-    transition: all 0.3s ease;
-}
-
-input:focus {
-    border-color: #6366f1; /* Warna indigo sesuai tren modern */
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-}
 .table-container {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    padding: 20px;
+    margin-top: 20px;
     overflow-x: auto;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
-.table {
+/* Tabel Modern */
+.table-guru {
     width: 100%;
     border-collapse: separate;
-    border-spacing: 0;
-    background: #fff;
+    border-spacing: 0 8px;
 }
 
-.table th {
-    background: #f1f5f9;
-    padding: 16px;
-    text-align: left;
+.table-guru th {
+    padding: 15px;
+    color: #64748b;
     font-size: 0.85rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #475569;
-    border-bottom: 1px solid #e2e8f0;
+    border: none;
+    text-align: left;
 }
 
-.table td {
-    padding: 16px;
-    color: #1e293b;
+.table-guru tr {
+    transition: transform 0.2s ease;
+}
+
+.table-guru td {
+    padding: 15px;
+    background: #fff;
+    border-top: 1px solid #f1f5f9;
     border-bottom: 1px solid #f1f5f9;
-    transition: all 0.2s ease;
+    vertical-align: middle;
 }
 
-.table tr:last-child td {
-    border-bottom: none;
+.table-guru td:first-child {
+    border-left: 1px solid #f1f5f9;
+    border-top-left-radius: 12px;
+    border-bottom-left-radius: 12px;
 }
 
-.table tr:hover td {
-    background: #f8fafc;
-    color: #6366f1; /* Warna teks berubah saat hover */
-    transform: scale(1.002);
+.table-guru td:last-child {
+    border-right: 1px solid #f1f5f9;
+    border-top-right-radius: 12px;
+    border-bottom-right-radius: 12px;
 }
+
+.table-guru tbody tr:hover td {
+    background: #f8faff;
+    border-color: #e2e8f0;
+}
+
+/* Modal & Form Styling */
+.modal-box {
+    border-radius: 20px;
+    padding: 30px;
+    border: none;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.modal-box h3 {
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 25px;
+}
+
+form label {
+    display: block;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+}
+
+form input, form select {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+}
+
+form input:focus, form select:focus {
+    border-color: #3b82f6;
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+/* Badge untuk Posisi */
+.badge-posisi {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    background: #eff6ff;
+    color: #3b82f6;
+}
+
+/* Action Buttons */
+.btn-action {
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    margin-right: 5px;
+    border: none;
+    transition: 0.2s;
+}
+
+.btn-edit-guru { background: #f0fdf4; color: #16a34a; }
+.btn-delete-guru { background: #fef2f2; color: #dc2626; }
+
+.btn-action:hover { transform: scale(1.05); filter: brightness(0.95); }
 </style>
 
 <script>
+document.getElementById('btnCancelEdit').addEventListener('click', function(){
+    const m = document.getElementById('modalEditGuru'); if(m) m.style.display='none';
+});
+
+// Buka modal dan isi data ketika tombol .btn-edit diklik
+document.querySelectorAll('.btn-edit').forEach(btn => {
+    btn.addEventListener('click', function(e){
+        e.preventDefault();
+        const id = btn.dataset.id || '';
+        const nama = btn.dataset.nama || '';
+        const email = btn.dataset.email || '';
+        const posisi = btn.dataset.posisi || '';
+        const mapel = btn.dataset.mapel || '';
+
+        document.getElementById('edit_id').value = id;
+        document.getElementById('edit_nama').value = nama;
+        document.getElementById('edit_email').value = email;
+        document.getElementById('edit_posisi').value = posisi;
+        document.getElementById('edit_mapel').value = mapel;
+
+        const modal = document.getElementById('modalEditGuru');
+        if(modal) modal.style.display = 'flex';
+    });
+});
+
 function openModal(){
     document.getElementById('modalTambahGuru').style.display = 'flex';
 }

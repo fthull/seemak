@@ -71,191 +71,195 @@ include '../partials/sidebar.php';
 ?>
 
 <div class="app-content">
-    <h2>👨‍🏫 Kelola Data Siswa</h2>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <h2 style="font-weight: 800; color: #1e293b; margin: 0;">👨‍🎓 Kelola Data Siswa</h2>
+        <button class="btn btn-primary" onclick="openModal()" style="border-radius: 12px; padding: 12px 24px; font-weight: 600; box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);">
+            <i class="fas fa-plus-circle mr-2"></i> Tambah Siswa Baru
+        </button>
+    </div>
 
     <?php if(isset($success)): ?>
-        <div style="padding:15px; background:#d4edda; color:#155724; border-radius:5px; margin-bottom:20px;">
-            ✅ <?= $success ?>
+        <div style="padding:15px 20px; background:#ecfdf5; color:#059669; border-radius:12px; margin-bottom:25px; border-left: 5px solid #10b981; display:flex; align-items:center; gap:10px;">
+            <i class="fas fa-check-circle"></i> <?= $success ?>
         </div>
     <?php endif; ?>
 
-    <?php if(isset($error)): ?>
-        <div style="padding:15px; background:#f8d7da; color:#721c24; border-radius:5px; margin-bottom:20px;">
-            ❌ <?= $error ?>
-        </div>
-    <?php endif; ?>
-
-    <button class="btn btn-primary" onclick="openModal()">➕ Tambah Siswa</button>
-
-    <table class="table">
-        <tr>
-            <th>Nama</th>
-            <th>Kelas</th>
-            <th>Aksi</th>
-        </tr>
-
-        <?php
-        $q = mysqli_query($conn,"SELECT * FROM siswa ORDER BY nama ASC");
-        if(mysqli_num_rows($q) > 0) {
-            while($d=mysqli_fetch_assoc($q)){
-        ?>
-        <tr>
-            <td><?= $d['nama'] ?></td>
-            <td><?= $d['kelas'] ?></td>
-                <td>
-                     <a href="#" class="btn btn-secondary btn-edit-siswa"
-                         data-id="<?= $d['id'] ?>"
-                         data-nama="<?= htmlspecialchars($d['nama']) ?>"
-                         data-kelas="<?= htmlspecialchars($d['kelas']) ?>"
-                     >Edit</a>
-                <a href="?hapus=<?= $d['id'] ?>" class="btn btn-danger" onclick="return confirm('Yakin ingin menghapus siswa ini?')">Hapus</a>
-            </td>
-        </tr>
-        <?php 
-            }
-        } else {
-            echo "<tr><td colspan='3' style='text-align:center; color:#999;'>Belum ada siswa</td></tr>";
-        }
-        ?>
-    </table>
+    <div class="table-container">
+        <table class="table-siswa">
+            <thead>
+                <tr>
+                    <th>Nama Lengkap</th>
+                    <th>Tingkat / Kelas</th>
+                    <th style="text-align: center;">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php
+                $q = mysqli_query($conn,"SELECT * FROM siswa ORDER BY nama ASC");
+                if(mysqli_num_rows($q) > 0) {
+                    while($d=mysqli_fetch_assoc($q)){
+                ?>
+                <tr>
+                    <td>
+                        <div style="font-weight: 700; color: #1e293b;"><?= $d['nama'] ?></div>
+                        <small style="color: #94a3b8;">NIS: #<?= $d['id'] + 1000 ?></small>
+                    </td>
+                    <td>
+                        <span class="badge-kelas">
+                            <i class="fas fa-graduation-cap mr-1"></i> Kelas <?= $d['kelas'] ?>
+                        </span>
+                    </td>
+                    <td style="text-align: center;">
+                        <button class="btn-action btn-edit-siswa-alt btn-edit-siswa"
+                            data-id="<?= $d['id'] ?>"
+                            data-nama="<?= htmlspecialchars($d['nama']) ?>"
+                            data-kelas="<?= htmlspecialchars($d['kelas']) ?>">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <a href="?hapus=<?= $d['id'] ?>" class="btn-action btn-delete-siswa-alt" onclick="return confirm('Yakin ingin menghapus siswa ini?')">
+                            <i class="fas fa-trash-alt"></i> Hapus
+                        </a>
+                    </td>
+                </tr>
+                <?php 
+                    }
+                } else {
+                    echo "<tr><td colspan='3' style='text-align:center; padding:50px; color:#94a3b8;'>
+                            <i class='fas fa-user-slash' style='display:block; font-size:2rem; margin-bottom:10px;'></i>
+                            Belum ada data siswa
+                          </td></tr>";
+                }
+                ?>
+            </tbody>
+        </table>
+    </div>
 </div>
-
-<!-- MODAL TAMBAH GURU -->
 <div class="modal" id="modalTambahSiswa">
-    <div class="modal-box">
-        <h3>➕ Tambah Siswa</h3>
-
+    <div class="modal-box" style="border-radius: 20px; padding: 30px;">
+        <h3 style="font-weight: 700; color: #1e293b; margin-bottom: 25px;">➕ Tambah Siswa Baru</h3>
         <form method="POST">
-            <div>
-                <label>Nama Siswa</label>
-                <input type="text" name="nama" placeholder="Masukkan nama siswa" required>
+            <div style="margin-bottom: 15px;">
+                <label style="display:block; font-weight:600; color:#475569; margin-bottom:8px;">Nama Siswa</label>
+                <input type="text" name="nama" class="form-control" style="width:100%; padding:12px; border-radius:10px; border:1.5px solid #e2e8f0;" placeholder="Masukkan nama lengkap" required>
             </div>
-
-            <div>
-                <label>Kelas</label>
-                <input type="text" name="kelas" placeholder="Masukkan kelas siswa" required>
+            <div style="margin-bottom: 15px;">
+                <label style="display:block; font-weight:600; color:#475569; margin-bottom:8px;">Kelas</label>
+                <input type="text" name="kelas" class="form-control" style="width:100%; padding:12px; border-radius:10px; border:1.5px solid #e2e8f0;" placeholder="Contoh: XII TKJ 1" required>
             </div>
-
-            
-
-            <div style="margin-top:20px; display:flex; gap:10px;">
-                <button type="submit" name="tambah_siswa" class="btn btn-success">💾 Simpan</button>
-                <button type="button" onclick="closeModal()" class="btn btn-secondary">Batal</button>
+            <div style="margin-top:25px; display:flex; gap:10px;">
+                <button type="submit" name="tambah_siswa" class="btn btn-success" style="border-radius:10px; padding:10px 20px;">💾 Simpan Siswa</button>
+                <button type="button" onclick="closeModal()" class="btn btn-secondary" style="border-radius:10px; padding:10px 20px;">Batal</button>
+            </div>
+        </form>
+    </div>
+</div>
+<div class="modal" id="modalEditSiswa">
+    <div class="modal-box" style="border-radius: 20px; padding: 30px; max-width:800px;">
+        <h3 style="font-weight: 700; color: #1e293b; margin-bottom: 20px;">✏️ Edit Siswa</h3>
+        <form method="POST" style="max-width:700px; width:100%;">
+            <input type="hidden" id="edit_siswa_id" name="id" value="">
+            <div style="margin-bottom:15px;">
+                <label style="display:block; font-weight:600; color:#475569; margin-bottom:8px;">Nama Siswa</label>
+                <input type="text" id="edit_siswa_nama" name="nama" value="" required class="form-control" style="width:100%; padding:12px; border-radius:10px; border:1.5px solid #e2e8f0;">
+            </div>
+            <div style="margin-bottom:15px;">
+                <label style="display:block; font-weight:600; color:#475569; margin-bottom:8px;">Kelas</label>
+                <input type="text" id="edit_siswa_kelas" name="kelas" value="" required class="form-control" style="width:100%; padding:12px; border-radius:10px; border:1.5px solid #e2e8f0;">
+            </div>
+            <div style="margin-top:18px; display:flex; gap:10px;">
+                <button type="submit" name="update_siswa" class="btn btn-success" style="border-radius:10px; padding:10px 20px;">💾 Simpan Perubahan</button>
+                <button type="button" id="btnCancelEditSiswa" class="btn btn-secondary" style="border-radius:10px; padding:10px 20px;">Batal</button>
             </div>
         </form>
     </div>
 </div>
 
 <style>
-/* Container Utama Modal */
-.modal {
-    display: none;
-    position: fixed;
-    inset: 0;
-    z-index: 1000;
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(8px); /* Efek blur di belakang modal */
-    padding: 20px;
+/* Container Utama */
+.app-content {
+    background: #f8fafc;
+    padding: 30px;
+    border-radius: 20px;
 }
 
-.modal.active {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    animation: fadeIn 0.3s ease-out;
-}
-
-/* Konten Modal (Kotak Putih) */
-.modal-content {
-    background: #ffffff;
-    padding: 2rem;
-    border-radius: 16px;
-    width: 100%;
-    max-width: 500px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    transform: scale(0.95);
-    transition: transform 0.3s ease;
-}
-
-.modal.active .modal-content {
-    transform: scale(1);
-    animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-/* Animasi */
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-@keyframes slideUp {
-    from { opacity: 0; transform: translateY(20px) scale(0.95); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
-}
-label {
-    display: block;
-    margin-top: 20px;
-    margin-bottom: 8px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: #64748b; /* Warna abu-abu kebiruan yang modern */
-    transition: color 0.3s ease;
-}
-
-/* Bonus: Styling Input agar senada */
-input, select, textarea {
-    width: 100%;
-    padding: 10px 14px;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    outline: none;
-    transition: all 0.3s ease;
-}
-
-input:focus {
-    border-color: #6366f1; /* Warna indigo sesuai tren modern */
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-}
 .table-container {
-    overflow-x: auto;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    padding: 20px;
+    margin-top: 20px;
 }
 
-.table {
+/* Tabel Siswa Modern */
+.table-siswa {
     width: 100%;
     border-collapse: separate;
-    border-spacing: 0;
-    background: #fff;
+    border-spacing: 0 8px;
 }
 
-.table th {
-    background: #f1f5f9;
-    padding: 16px;
-    text-align: left;
+.table-siswa th {
+    padding: 15px;
+    color: #64748b;
     font-size: 0.85rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #475569;
-    border-bottom: 1px solid #e2e8f0;
+    text-align: left;
 }
 
-.table td {
-    padding: 16px;
-    color: #1e293b;
+.table-siswa td {
+    padding: 15px;
+    background: #fff;
+    border-top: 1px solid #f1f5f9;
     border-bottom: 1px solid #f1f5f9;
-    transition: all 0.2s ease;
+    vertical-align: middle;
 }
 
-.table tr:last-child td {
-    border-bottom: none;
+.table-siswa td:first-child {
+    border-left: 1px solid #f1f5f9;
+    border-top-left-radius: 12px;
+    border-bottom-left-radius: 12px;
 }
 
-.table tr:hover td {
-    background: #f8fafc;
-    color: #6366f1; /* Warna teks berubah saat hover */
-    transform: scale(1.002);
-}</style>
+.table-siswa td:last-child {
+    border-right: 1px solid #f1f5f9;
+    border-top-right-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+.table-siswa tbody tr:hover td {
+    background: #f8faff;
+    border-color: #e2e8f0;
+}
+
+/* Badge Kelas */
+.badge-kelas {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    background: #f0fdf4;
+    color: #16a34a; /* Hijau untuk membedakan dengan Guru (Biru) */
+}
+
+/* Tombol Aksi */
+.btn-action {
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    border: none;
+    transition: 0.2s;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.btn-edit-siswa-alt { background: #eff6ff; color: #3b82f6; }
+.btn-delete-siswa-alt { background: #fef2f2; color: #dc2626; }
+
+.btn-action:hover { transform: scale(1.05); filter: brightness(0.95); }
+</style>
 
 <script>
 function openModal(){
@@ -268,37 +272,16 @@ function closeModal(){
 
 // Tutup modal jika klik di luar
 window.onclick = function(event) {
-    const modal = document.getElementById('modalTambahSiswa');
-    if (event.target == modal) {
-        modal.style.display = 'none';
-    }
+    const modalTambah = document.getElementById('modalTambahSiswa');
+    const modalEdit = document.getElementById('modalEditSiswa');
+    if (event.target == modalTambah) { modalTambah.style.display = 'none'; }
+    if (event.target == modalEdit) { modalEdit.style.display = 'none'; }
 }
 
 // Jika sedang mengedit, scroll ke atas agar form edit terlihat
 <?php // client-side modal handles edit display ?>
 </script>
 
-<!-- MODAL EDIT SISWA -->
-<div class="modal" id="modalEditSiswa">
-    <div class="modal-box">
-        <h3>✏️ Edit Siswa</h3>
-        <form method="POST" style="max-width:600px;">
-            <input type="hidden" id="edit_siswa_id" name="id" value="">
-            <div>
-                <label>Nama Siswa</label>
-                <input type="text" id="edit_siswa_nama" name="nama" value="" required>
-            </div>
-            <div>
-                <label>Kelas</label>
-                <input type="text" id="edit_siswa_kelas" name="kelas" value="" required>
-            </div>
-            <div style="margin-top:12px; display:flex; gap:10px;">
-                <button type="submit" name="update_siswa" class="btn btn-success">💾 Simpan Perubahan</button>
-                <button type="button" id="btnCancelEditSiswa" class="btn btn-secondary">Batal</button>
-            </div>
-        </form>
-    </div>
-</div>
 
 <script>
 document.getElementById('btnCancelEditSiswa').addEventListener('click', function(){
