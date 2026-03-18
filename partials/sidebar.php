@@ -1,3 +1,39 @@
+<?php
+$role = $_SESSION['role'];
+$user_id = $_SESSION['id'];
+
+$jumlah_baru = 0;
+
+if ($role == 'guru') {
+
+    $qGuru = mysqli_query($conn,"
+        SELECT id FROM guru 
+        WHERE user_id='$user_id'
+        LIMIT 1
+    ");
+    $dataGuru = mysqli_fetch_assoc($qGuru);
+    $id_guru = $dataGuru['id'] ?? 0;
+
+    $qNotif = mysqli_query($conn,"
+        SELECT COUNT(*) as total 
+        FROM surat_pribadi 
+        WHERE id_guru='$id_guru' AND status='terkirim'
+    ");
+    $dataNotif = mysqli_fetch_assoc($qNotif);
+    $jumlah_baru = $dataNotif['total'];
+
+} else if ($role == 'admin') {
+
+    $qNotif = mysqli_query($conn,"
+        SELECT COUNT(*) as total 
+        FROM surat_pribadi 
+        WHERE status='terkirim'
+    ");
+    $dataNotif = mysqli_fetch_assoc($qNotif);
+    $jumlah_baru = $dataNotif['total'];
+}
+?>
+
 <style>
     /* Variabel Warna Berdasarkan Laman Register */
     :root {
@@ -165,6 +201,118 @@
         background: #eee;
         border-radius: 10px;
     }
+    .notif-badge{
+    position:absolute;
+    top:5px;
+    right:10px;
+    background:#ef4444;
+    color:white;
+    font-size:11px;
+    font-weight:bold;
+    padding:3px 7px;
+    border-radius:50%;
+    min-width:18px;
+    text-align:center;
+}
+/* --- RESPONSIVE MOBILE (Bottom Navbar) --- */
+/* --- RESPONSIVE MOBILE (Navbar Aplikasi Bottom) --- */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 100% !important;
+        height: 70px !important; /* Tinggi tetap navbar */
+        position: fixed !important;
+        top: auto !important;
+        bottom: 0 !important; /* Menempel di bawah layar */
+        left: 0 !important;
+        right: 0 !important;
+        flex-direction: row !important;
+        background: #ffffff !important;
+        box-shadow: 0 -2px 15px rgba(0,0,0,0.1) !important;
+        border-radius: 20px 20px 0 0 !important; /* Melengkung di bagian atas saja */
+        padding: 0 !important;
+        z-index: 9999;
+    }
+
+    /* Sembunyikan elemen yang tidak perlu di mobile */
+    .sidebar-header, 
+    .menu-label, 
+    .logout-section,
+    .sidebar .nav-link:first-child { 
+        display: none !important; 
+    }
+
+    /* Container navigasi jadi menyamping (Horizontal) */
+    .nav-container {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: space-around !important;
+        align-items: center !important;
+        width: 100% !important;
+        height: 100% !important;
+        padding: 0 5px !important;
+        overflow: hidden !important;
+    }
+
+    /* Styling link menu agar jadi tumpukan Ikon & Teks */
+    .nav-link {
+        flex: 1 !important;
+        display: flex !important;
+        flex-direction: column !important; /* Ikon di atas, teks di bawah */
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 5px 0 !important;
+        margin: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        left: 0 !important;
+        color: #777 !important; /* Warna default abu-abu */
+        gap: 2px !important;
+    }
+
+    /* Ukuran ikon di mobile */
+    .nav-link i {
+        font-size: 1.3rem !important;
+        margin-right: 0 !important;
+        color: #777 !important;
+    }
+
+    /* Ukuran teks di mobile */
+    .nav-link span {
+        font-size: 0.65rem !important;
+        font-weight: 500 !important;
+        display: block !important;
+    }
+
+    /* --- STATE AKTIF DI MOBILE --- */
+    .nav-link.active {
+        background: transparent !important;
+        color: var(--seemak-primary) !important;
+    }
+
+    .nav-link.active i {
+        color: var(--seemak-primary) !important;
+        transform: translateY(-2px); /* Sedikit naik saat aktif */
+        transition: all 0.3s ease;
+    }
+
+    .nav-link.active span {
+        font-weight: 700 !important;
+    }
+
+    /* Badge Notifikasi agar pas di atas ikon */
+    .notif-badge {
+        top: 8px !important;
+        right: 30% !important;
+        padding: 2px 6px !important;
+        font-size: 10px !important;
+        border: 2px solid white; /* Outline putih agar kontras */
+    }
+
+    /* PENTING: Berikan ruang di bawah konten halaman agar tidak tertutup navbar */
+    body {
+        padding-bottom: 80px !important;
+    }
+}
 </style>
 
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -178,6 +326,11 @@
     </div>
 
     <div class="nav-container">
+        <div class="nav-link" style="pointer-events: none; background-color: var(--hover-bg);">
+            <i class="fas fa-user"></i>
+            <strong><?php echo isset($_SESSION['nama']) ? $_SESSION['nama'] : 'User'; ?></strong>
+        </div>
+        
         <div class="menu-label">Menu Utama</div>
         
         <a href="dashboard.php" class="nav-link <?= $active_page=='dashboard'?'active':'' ?>">
@@ -193,6 +346,9 @@
         <a href="surat_masuk.php" class="nav-link <?= $active_page=='surat_masuk'?'active':'' ?>">
             <i class="fas fa-inbox"></i>
             <span>Surat Masuk</span>
+            <?php if($jumlah_baru > 0){ ?>
+        <span class="notif-badge"><?= $jumlah_baru ?></span>
+    <?php } ?>
         </a>
 
         <a href="evaluasi.php" class="nav-link <?= $active_page=='evaluasi'?'active':'' ?>">

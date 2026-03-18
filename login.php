@@ -23,13 +23,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['id']    = $user['id'];
             $_SESSION['nama']  = $user['nama'];
             $_SESSION['email'] = $user['email'];
-            $_SESSION['role']  = $user['role'];
 
-            if ($user['role'] === 'admin') {
+            // Normalisasi role: beberapa data menggunakan teks 'orang tua/wali' atau 'wali kelas'
+            $rawRole = $user['role'];
+            if (strpos($rawRole, 'wali') !== false) {
+                $role = 'wali';
+            } else {
+                $role = $rawRole;
+            }
+
+            $_SESSION['role']  = $role;
+
+            if ($role === 'admin') {
                 header("Location: guru/dashboard.php");
-            } else if ($user['role'] === 'guru') {
+            } else if ($role === 'guru') {
                 header("Location: guru/dashboard.php");
-            } else{
+            } else {
                 header("Location: orangtua/dashboard.php");
             }
             exit;

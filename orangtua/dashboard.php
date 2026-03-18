@@ -272,6 +272,96 @@ include '../partials/sidebar.php';
     margin: 5px 0;
     font-size: 11px;
 }
+/* --- RESPONSIVE DASHBOARD --- */
+@media (max-width: 768px) {
+    /* Atur grid statistik jadi 2 kolom atau 1 kolom di HP */
+    .stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr; /* 2 kolom di HP */
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .stat-card {
+        margin-bottom: 0;
+        padding: 15px;
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .stat-card i {
+        margin-right: 0;
+        margin-bottom: 10px;
+        font-size: 1.5rem;
+    }
+
+    /* Tabel dibuat bisa geser ke samping jika teks kepanjangan */
+    .card-box {
+        padding: 15px;
+        overflow-x: auto;
+    }
+
+    .card-box table {
+        min-width: 400px; /* Supaya tabel tidak terjepit */
+    }
+
+    /* Modal Surat agar full screen di HP */
+    .modal-box.surat {
+        width: 95% !important;
+        margin: 10px auto;
+        padding: 15px;
+    }
+
+    .kop h3 { font-size: 12px; }
+    .kop h4 { font-size: 11px; }
+    
+    /* Ruang kosong di bawah supaya konten tidak tertutup navbar */
+    .app-content {
+        padding-bottom: 100px;
+    }
+}
+
+/* --- BOTTOM NAVBAR FIXED (Pastikan ini ada di sidebar.php atau file CSS Anda) --- */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 100% !important;
+        height: 70px !important;
+        position: fixed !important;
+        top: auto !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        flex-direction: row !important;
+        background: #fff !important;
+        box-shadow: 0 -4px 15px rgba(0,0,0,0.1) !important;
+        z-index: 9999 !important;
+        border-radius: 20px 20px 0 0;
+    }
+    
+    /* Sembunyikan Logo & Header di HP */
+    .sidebar-header, .menu-label, .logout-section {
+        display: none !important;
+    }
+
+    .nav-container {
+        display: flex !important;
+        width: 100% !important;
+        justify-content: space-around !important;
+        align-items: center !important;
+        padding: 0 !important;
+    }
+
+    .nav-link {
+        flex-direction: column !important;
+        padding: 10px 0 !important;
+        font-size: 10px !important;
+        gap: 2px;
+    }
+
+    .nav-link i {
+        margin-right: 0 !important;
+        font-size: 20px !important;
+    }
+}
 </style>
 
 <script>
