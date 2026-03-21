@@ -3,6 +3,23 @@ include '../conn.php';
 $active_page = 'surat_masuk';
 include '../partials/header.php';
 include '../partials/sidebar.php';
+
+$role = $_SESSION['role'];
+$user_id = $_SESSION['id'];
+
+$id_guru = null;
+
+if ($role == 'guru') {
+    $qGuru = mysqli_query($conn, "
+        SELECT id FROM guru 
+        WHERE user_id='$user_id'
+        LIMIT 1
+    ");
+    $dataGuru = mysqli_fetch_assoc($qGuru);
+    $id_guru = $dataGuru['id'] ?? 0;
+}
+
+
 ?>
 
 <div class="app-content">
@@ -21,13 +38,30 @@ include '../partials/sidebar.php';
         </thead>
         <tbody>
             <?php
-            $q = mysqli_query($conn, "
-                SELECT sp.*, ot.nama as nama_orangtua, s.nama as nama_siswa, s.kelas
-                FROM surat_pribadi sp
-                LEFT JOIN orang_tua ot ON sp.id_orangtua = ot.id
-                LEFT JOIN siswa s ON ot.siswa_id = s.id
-                ORDER BY sp.id DESC
-            ");
+           if ($role == 'admin') {
+
+    $q = mysqli_query($conn, "
+        SELECT sp.*, ot.nama as nama_orangtua, s.nama as nama_siswa, s.kelas
+        FROM surat_pribadi sp
+        LEFT JOIN orang_tua ot ON sp.id_orangtua = ot.id
+        LEFT JOIN siswa s ON ot.siswa_id = s.id
+        ORDER BY sp.id DESC
+    ");
+
+} else if ($role == 'guru') {
+
+    $q = mysqli_query($conn, "
+        SELECT sp.*, ot.nama as nama_orangtua, s.nama as nama_siswa, s.kelas
+        FROM surat_pribadi sp
+        LEFT JOIN orang_tua ot ON sp.id_orangtua = ot.id
+        LEFT JOIN siswa s ON ot.siswa_id = s.id
+        WHERE sp.id_guru = '$id_guru'
+        ORDER BY sp.id DESC
+    ");
+
+} else {
+    echo "<tr><td colspan='4'>Akses ditolak</td></tr>";
+}
             while ($d = mysqli_fetch_assoc($q)) {
                 // Tentukan class badge berdasarkan status
                 $statusClass = ($d['status'] == 'terkirim') ? 'status-sent' : 'status-draft';
@@ -68,10 +102,6 @@ include '../partials/sidebar.php';
                 <h3 id="popupJudul" style="text-transform:uppercase; margin:0;"></h3>
             </div>
 
-            <p class="kanan">
-                Ende, <span id="popupTanggal"></span>
-            </p>
-
             <p>
                 Kepada Yth.<br>
                 <b>Kepala Madrasah / Wali Kelas</b><br>
@@ -108,6 +138,10 @@ include '../partials/sidebar.php';
             <p>Wassalamu'alaikum Warahmatullahi Wabarakatuh</p>
 
             <br>
+
+            <p class="kanan">
+                Ende, <span id="popupTanggal"></span>
+            </p>
 
             <div class="kanan" style="margin-top:20px; margin-right: 50px;">
                 <p>Hormat saya,</p>

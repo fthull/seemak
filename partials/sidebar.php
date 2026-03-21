@@ -31,6 +31,23 @@ if ($role == 'guru') {
     ");
     $dataNotif = mysqli_fetch_assoc($qNotif);
     $jumlah_baru = $dataNotif['total'];
+
+} else if ($role == 'wali') {
+
+    $orang_tua = mysqli_query($conn, "
+        SELECT id FROM orang_tua 
+        WHERE user_id='$user_id'
+    ");
+    $data_ortu = mysqli_fetch_assoc($orang_tua);
+    $id_orangtua = $data_ortu['id'] ?? 0;
+
+    $qNotif = mysqli_query($conn,"
+        SELECT COUNT(*) as total 
+        FROM surat_resmi 
+        WHERE id_orangtua='$id_orangtua' AND status='diterima'
+    ");
+    $dataNotif = mysqli_fetch_assoc($qNotif);
+    $jumlah_baru = $dataNotif['total'];
 }
 ?>
 

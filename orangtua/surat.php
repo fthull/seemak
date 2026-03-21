@@ -47,42 +47,37 @@ $isi     = mysqli_real_escape_string($conn, $_POST['isi']);
     echo "<script>alert('Surat berhasil dibuat'); location='surat.php';</script>";
 }
 
+// Cari bagian if(isset($_POST['kirim_surat']))
 if(isset($_POST['kirim_surat'])){
+    $id_surat = $_POST['id_surat'];
+    $id_guru_arr = $_POST['id_guru'] ?? [];
 
-$id_surat = $_POST['id_surat'];
-$id_guru_arr = $_POST['id_guru'] ?? [];
+    if(empty($id_guru_arr)) {
+        echo "<script>alert('Pilih minimal satu guru tujuan'); location='surat.php';</script>";
+        exit;
+    }
 
-if(empty($id_guru_arr)) {
-    echo "<script>alert('Pilih minimal satu guru tujuan'); location='surat.php';</script>";
-    exit;
-}
+    $q = mysqli_query($conn,"SELECT * FROM surat_wali WHERE id='$id_surat'");
+    $d = mysqli_fetch_assoc($q);
+    $judul = $d['judul'];
+    $isi   = $d['isi'];
+    $id_orangtua = $d['id_orangtua'];
 
-$q = mysqli_query($conn,"SELECT * FROM surat_wali WHERE id='$id_surat'");
-$d = mysqli_fetch_assoc($q);
+    $berhasil = 0;
+    foreach($id_guru_arr as $id_guru) {
+        // Insert ke tabel surat_pribadi (untuk sisi Guru)
+        mysqli_query($conn,"INSERT INTO surat_pribadi 
+        (id_orangtua, id_guru, judul, isi, tanggal, status) 
+        VALUES ('$id_orangtua', '$id_guru', '$judul', '$isi', NOW(), 'terkirim')");
+        $berhasil++;
+    }
 
-$judul = $d['judul'];
-$isi   = $d['isi'];
-$id_orangtua = $d['id_orangtua'];
-
-$berhasil = 0;
-foreach($id_guru_arr as $id_guru) {
-    mysqli_query($conn,"INSERT INTO surat_pribadi
-    (id_orangtua,id_guru,judul,isi,tanggal,status)
-    VALUES
-    ('$id_orangtua','$id_guru','$judul','$isi',NOW(),'terkirim')");
-    $berhasil++;
-}
-
-if($berhasil > 0) {
-    mysqli_query($conn,"UPDATE surat_wali SET status='sent' WHERE id='$id_surat'");
-    echo "<script>
-    alert('Surat berhasil dikirim ke $berhasil guru');
-    location='surat.php';
-    </script>";
-} else {
-    echo "<script>alert('Gagal mengirim surat'); location='surat.php';</script>";
-}
-
+    if($berhasil > 0) {
+        // UPDATE STATUS DISINI: Ubah 'sent' menjadi 'terkirim' agar sesuai dengan badge CSS Anda
+        mysqli_query($conn,"UPDATE surat_wali SET status='terkirim' WHERE id='$id_surat'");
+        
+        echo "<script>alert('Surat berhasil dikirim ke $berhasil guru'); location='surat.php';</script>";
+    }
 }
 // SIMPAN ATAU UPDATE SURAT
 if (isset($_POST['update_surat'])) {
@@ -216,6 +211,46 @@ color:white;
 background:#ef4444;
 color:white;
 }
+/* Pastikan modal edit memiliki lapisan paling atas */
+#modalEditSurat {
+    z-index: 10001 !important;
+}
+
+#modalViewSurat {
+    z-index: 10000 !important;
+}@media (max-width: 768px) {
+    .action-btn {
+        padding: 10px 12px; /* Lebih besar agar mudah ditekan jari */
+        margin-bottom: 5px;
+    }
+    
+    /* Agar tabel tidak goyang saat diklik di HP */
+    .table-modern tr:active {
+        background-color: #f1f5f9;
+    }
+}
+@media (max-width: 768px) {
+    .modal-surat-box {
+        width: 95% !important;
+        margin: 10px auto;
+    }
+    .surat-body {
+        padding: 20px 15px !important; /* Kurangi padding di HP */
+    }
+    .tabel-identitas td {
+        font-size: 11pt;
+    }
+    .isi-surat-popup {
+        font-size: 11pt;
+    }
+}
+
+/* Tambahkan ini agar teks isi surat tidak pecah */
+.isi-surat-popup {
+    line-height: 1.6;
+    text-align: justify;
+    margin-top: 15px;
+}
 </style>
 
 <div class="app-content">
@@ -234,103 +269,87 @@ color:white;
     <th>Tujuan Surat</th>
     <th>Tanggal</th>
     <th>Status</th>
-    <th>Guru</th>
     <th>Aksi</th>
 </tr>
 </thead>
 
 <tbody>
-
 <?php
+// Query yang menggabungkan nama-nama guru dari tabel surat_pribadi
 $q = mysqli_query($conn, "
-SELECT sw.*, g.nama as nama_guru
-FROM surat_wali sw
-LEFT JOIN guru g ON sw.id_guru = g.id
-WHERE sw.id_orangtua='$wali_id'
-ORDER BY sw.id DESC
+    SELECT sw.*, 
+    (SELECT GROUP_CONCAT(g.nama SEPARATOR ', ') 
+     FROM surat_pribadi sp 
+     JOIN guru g ON sp.id_guru = g.id 
+     WHERE sp.id_orangtua = sw.id_orangtua AND sp.judul = sw.judul AND sp.tanggal >= sw.tanggal
+    ) as nama_guru_tujuan
+    FROM surat_wali sw
+    WHERE sw.id_orangtua='$wali_id'
+    ORDER BY sw.id DESC
 ");
 
 if(mysqli_num_rows($q) > 0){
-
-while ($d = mysqli_fetch_assoc($q)) {
-
-    $statusClass = ($d['status'] == 'terkirim') ? 'status-sent' : 'status-draft';
-    $statusText  = ($d['status'] == 'terkirim') ? 'Terkirim' : 'Draft';
+    while ($d = mysqli_fetch_assoc($q)) {
+        // Menentukan class warna badge
+        $statusClass = ($d['status'] == 'terkirim') ? 'status-sent' : 'status-draft';
+        $statusText  = ($d['status'] == 'terkirim') ? 'Terkirim' : 'Draft';
+        
+        // Cek jika nama guru kosong
+        $displayGuru = $d['nama_guru_tujuan'] ? $d['nama_guru_tujuan'] : '<i style="color:#ccc">Belum dikirim</i>';
 ?>
 
 <tr onclick="lihatSurat(<?= $d['id'] ?>)">
+    <td>
+        <div style="font-weight:600;color:#1e293b;"><?= $d['judul'] ?></div>
+        <small style="color:#64748b;">Surat Wali Murid</small>
+    </td>
+    <td style="max-width: 200px;">
+        <div style="font-size: 13px; color: #334155;">
+            <i class="fas fa-paper-plane" style="font-size: 10px; color: #2563eb;"></i> 
+            <?= $displayGuru ?>
+        </div>
+    </td>
+    <td>
+        <span style="color:#64748b;">
+            <i class="far fa-calendar-alt mr-1"></i> <?= $d['tanggal'] ?>
+        </span>
+    </td>
+    <td>
+        <span class="badge-status <?= $statusClass ?>">
+            <?= $statusText ?>
+        </span>
+    </td>
+    
+    <td>
+        <?php if($d['status'] !== 'terkirim'): ?>
+            <button class="action-btn btn-send" title="Kirim Sekarang"
+                    onclick="event.stopPropagation(); openModalKirim(<?= $d['id'] ?>)">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+            <button class="action-btn btn-edit" title="Edit" 
+                    onclick="event.stopPropagation(); editExistingSurat(<?= htmlspecialchars(json_encode($d)) ?>)">
+                <i class="fas fa-edit"></i>
+            </button>
+        <?php else: ?>
+             <button class="action-btn" style="background:#f1f5f9; color:#94a3b8; cursor:default;" title="Sudah Terkirim">
+                <i class="fas fa-check-double"></i>
+            </button>
+        <?php endif; ?>
 
-<td>
-<div style="font-weight:600;color:#1e293b;">
-<?= $d['judul'] ?>
-</div>
-<small style="color:#64748b;">
-Surat dari Wali Murid
-</small>
-</td>
-
-<td>
-<span style="color:#475569;">
-<i class="fas fa-user-circle mr-1"></i>
-Kepala Madrasah / Wali Kelas
-</span>
-</td>
-
-<td>
-<span style="color:#64748b;">
-<i class="far fa-calendar-alt mr-1"></i>
-<?= $d['tanggal'] ?>
-</span>
-</td>
-
-<td>
-<span class="badge-status <?= $statusClass ?>">
-<?= $statusText ?>
-</span>
-</td>
-
-<td>
-<span class="badge-status <?= $statusClass ?>">
-<?= $d['nama_guru'] ?></span>
-</td>
-
-<td>
-
-<button class="action-btn btn-send"
-onclick="event.stopPropagation(); openModalKirim(<?= $d['id'] ?>)">
-<i class="fas fa-paper-plane"></i>
-</button>
-
-<button class="action-btn btn-edit"
-title="Edit Surat"
-onclick="event.stopPropagation(); editExistingSurat(<?= json_encode($d) ?>)">
-<i class="fas fa-edit"></i>
-</button>
-
-<a href="surat.php?hapus=<?= $d['id'] ?>"
-class="action-btn btn-delete"
-title="Hapus"
-onclick="event.stopPropagation(); return confirm('Apakah Anda yakin ingin menghapus surat ini?')">
-<i class="fas fa-trash"></i>
-</a>
-
-</td>
+        <a href="surat.php?hapus=<?= $d['id'] ?>" 
+           class="action-btn btn-delete" 
+           onclick="event.stopPropagation(); return confirm('Hapus surat?')">
+            <i class="fas fa-trash"></i>
+        </a>
+    </td>
 </tr>
 
 <?php
-}}
-
-else{
-echo "
-<tr>
-<td colspan='5' style='text-align:center;padding:25px;color:#94a3b8;'>
-Belum ada surat yang dibuat
-</td>
-</tr>
-";
+    }
+} else {
+    echo "<tr><td colspan='6' style='text-align:center;padding:25px;color:#94a3b8;'>Belum ada surat</td></tr>";
 }
 ?>
-
 </tbody>
 </table>
 
@@ -656,17 +675,23 @@ function closeViewSurat(){
 document.getElementById("modalViewSurat").style.display="none";
 }
 
-function editExistingSurat(data){
+function editExistingSurat(data) {
+    // 1. Pastikan modal preview tertutup
+    closeViewSurat(); 
+    
+    // 2. Isi data ke dalam form edit
+    document.getElementById('edit_id').value = data.id;
+    document.getElementById('edit_judul').value = data.judul;
+    document.getElementById('edit_tanggal').value = data.tanggal;
+    document.getElementById('edit_isi').value = data.isi;
+    
+    // Jika ada input tempat (opsional)
+    if(document.getElementById('edit_tempat')) {
+        document.getElementById('edit_tempat').value = "Ende"; 
+    }
 
-// isi form edit
-document.getElementById('edit_id').value = data.id;
-document.getElementById('edit_judul').value = data.judul;
-document.getElementById('edit_tanggal').value = data.tanggal;
-document.getElementById('edit_isi').value = data.isi;
-
-// buka modal edit
-document.getElementById('modalEditSurat').style.display = 'flex';
-
+    // 3. Tampilkan modal edit
+    document.getElementById('modalEditSurat').style.display = 'flex';
 }
 function closeEditSurat(){
 document.getElementById('modalEditSurat').style.display = 'none';

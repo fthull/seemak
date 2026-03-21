@@ -147,7 +147,7 @@ include '../partials/sidebar.php';
                 
                 if(mysqli_num_rows($q) > 0) {
                     while($d=mysqli_fetch_assoc($q)){
-                        $statusClass = ($d['status'] == 'sent') ? 'status-new' : 'status-read';
+                $statusClass = ($d['status'] == 'diterima') ? 'status-new' : 'status-read';
                 ?>
                 <tr>
                     <td>
@@ -235,7 +235,7 @@ include '../partials/sidebar.php';
 </div>
 <script>
 function lihatSurat(id){
-    fetch(`get_surat_wali.php?id=${id}`)
+    fetch(`get_surat_resmi.php?id=${id}`)
         .then(response => response.json())
         .then(data => {
             document.getElementById('previewNomor').textContent = data.nomor;

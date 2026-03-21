@@ -6,14 +6,8 @@ include '../partials/sidebar.php';
 
 // HAPUS SURAT
 if(isset($_GET['hapus'])) {
-    $id = mysqli_real_escape_string($conn, $_GET['hapus']);
-
-    // hapus relasi di surat_resmi dulu agar tidak melanggar FK
-    mysqli_query($conn, "DELETE FROM surat_resmi WHERE id_surat = '$id'");
-
-    // lalu hapus entri utama
+    $id = $_GET['hapus'];
     mysqli_query($conn, "DELETE FROM surat WHERE id = '$id'");
-
     echo "<script>alert('Surat berhasil dihapus'); location='surat.php';</script>";
 }
 
@@ -26,8 +20,8 @@ if(isset($_POST['kirim_surat'])) {
     } else {
         $success = true;
         foreach($id_orangtua_list as $id_ortu){
-            $query = "INSERT INTO surat_resmi (id_surat, id_orangtua, status, tanggal) 
-                      VALUES ('$id_surat', '$id_ortu', 'diterima', NOW())";
+            $query = "INSERT INTO surat_tujuan (id_surat, id_orangtua, status, tanggal) 
+                      VALUES ('$id_surat', '$id_ortu', 'terkirim', NOW())";
             if(!mysqli_query($conn, $query)) { $success = false; break; }
         }
         if($success) {
@@ -46,7 +40,7 @@ if (isset($_POST['proses_surat'])) {
     $isi     = mysqli_real_escape_string($conn, $_POST['isi']); 
     // tanggal dikendalikan oleh database (TIMESTAMP) – gunakan nilai sekarang
     // nilai dari POST diabaikan karena MySQL akan menyimpan CURRENT_TIMESTAMP
-    $tanggal = date('Y-m-d H:i:s');
+    $tanggal = date('Y-m-d');
     $ttd     = mysqli_real_escape_string($conn, $_POST['ttd']);
     $judul   = $perihal;
 
@@ -474,9 +468,8 @@ if (isset($_POST['proses_surat'])) {
 </style>
 
 <div class="app-content">
-<button class="btn btn-primary" onclick="openTemplateSelector()">
-<i class="fas fa-plus"></i> Buat Surat Baru
-</button>
+    <button class="btn btn-primary" onclick="openTemplateSelector()">Buat Surat Baru</button>
+
     <div class="card-box">
     <table class="table-modern">
         <thead>
@@ -493,9 +486,8 @@ if (isset($_POST['proses_surat'])) {
             $q = mysqli_query($conn, "SELECT * FROM surat ORDER BY id DESC");
             while ($d = mysqli_fetch_assoc($q)) {
                 // Tentukan class badge berdasarkan status
-                $statusSent = in_array($d['status'], ['sent', 'terkirim']);
-                $statusClass = $statusSent ? 'status-sent' : 'status-draft';
-                $statusText = $statusSent ? 'Terkirim' : 'Draft';
+                $statusClass = ($d['status'] == 'sent') ? 'status-sent' : 'status-draft';
+                $statusText = ($d['status'] == 'sent') ? 'Terkirim' : 'Draft';
             ?>
                 <tr>
                     <td>
@@ -720,8 +712,6 @@ if (isset($_POST['proses_surat'])) {
 
     function launchEditor(type) {
         closeTemplateSelector();
-        document.getElementById('val_id').value = ''; // jelas new record
-
         let template = tplUndangan;
         if(type === 'pemberitahuan') {
             template = tplPemberitahuan;
@@ -739,18 +729,16 @@ if (isset($_POST['proses_surat'])) {
         document.getElementById('edit_isi').innerHTML        = data.isi || '';
         document.getElementById('edit_tanggal').innerText   = data.tanggal || '<?php echo date('d F Y'); ?>';
         document.getElementById('edit_ttd').innerText       = data.ttd || '';
-        document.getElementById('val_id').value             = data.id || '';
         document.getElementById('editorModal').style.display = 'block';
     }
 
     function saveToDatabase() {
-        document.getElementById('val_id').value = document.getElementById('val_id').value || '';
         document.getElementById('val_nomor').value = document.getElementById('edit_nomor').innerText;
         document.getElementById('val_perihal').value = document.getElementById('edit_perihal').innerText;
         document.getElementById('val_lampiran').value = document.getElementById('edit_lampiran').innerText;
         document.getElementById('val_tujuan').value = document.getElementById('edit_tujuan').innerText;
         document.getElementById('val_isi').value = document.getElementById('edit_isi').innerHTML;
-        document.getElementById('val_tanggal').value = document.getElementById('edit_tanggal').innerText;
+        // tanggal akan diisi oleh server sebagai timestamp; tidak perlu mengambil dari editor
         document.getElementById('val_ttd').value = document.getElementById('edit_ttd').innerText;
         document.getElementById('btnProses').click();
     }

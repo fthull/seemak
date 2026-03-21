@@ -3,27 +3,99 @@ include '../conn.php';
 $active_page = 'dashboard';
 include '../partials/header.php';
 include '../partials/sidebar.php';
-/* Query ringkas */
-$total_surat = mysqli_fetch_assoc(
-    mysqli_query($conn,"SELECT COUNT(*) total FROM surat")
-)['total'];
 
-$surat_kirim = mysqli_fetch_assoc(
-    mysqli_query($conn,"SELECT COUNT(*) total FROM surat WHERE status='terkirim'")
-)['total'];
-
-$surat_masuk = mysqli_fetch_assoc(
-    mysqli_query($conn,"SELECT COUNT(*) total FROM surat_pribadi")
-)['total'];
-
+/* Logika Query Tetap (Tidak Diubah) */
+$total_surat = mysqli_fetch_assoc(mysqli_query($conn,"SELECT COUNT(*) total FROM surat"))['total'];
+$surat_kirim = mysqli_fetch_assoc(mysqli_query($conn,"SELECT COUNT(*) total FROM surat WHERE status='terkirim'"))['total'];
+$surat_masuk = mysqli_fetch_assoc(mysqli_query($conn,"SELECT COUNT(*) total FROM surat_pribadi"))['total'];
+// $evaluasi = mysqli_fetch_assoc(mysqli_query($conn,"SELECT COUNT(*) total FROM evaluasi"))['total'] ?? 0;
 ?>
 
-<div class="app-content">
-    <h2>📊 Dashboard</h2>
-    <p>Ringkasan Sistem Layanan Madrasah</p>
+<style>
+    :root {
+        --primary: #1e293b;
+        --accent: #2563eb;
+        --bg-light: #f8fafc;
+    }
 
-    <!-- STAT -->
-    <div class="stats">
+    .app-content { background: var(--bg-light); padding: 25px; }
+    
+    /* Stats Card Styling */
+    .stats-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    .stat-card {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+    }
+    .stat-card:hover { transform: translateY(-5px); }
+    .stat-card i {
+        font-size: 2.5rem;
+        margin-right: 20px;
+        color: var(--accent);
+        opacity: 0.8;
+    }
+    .stat-card h4 { margin: 0; color: #64748b; font-size: 14px; text-transform: uppercase; }
+    .stat-card span { font-size: 24px; font-weight: 700; color: var(--primary); }
+
+    /* Layout Grid */
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 25px;
+        margin-bottom: 25px;
+    }
+    .card-box {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .card-box h3 { 
+        margin-bottom: 20px; 
+        font-size: 18px; 
+        display: flex; 
+        align-items: center; 
+        justify-content: space-between;
+        color: var(--primary);
+    }
+
+    /* Table Styling */
+    .table-custom { width: 100%; border-collapse: collapse; }
+    .table-custom th { text-align: left; padding: 12px; border-bottom: 2px solid #edf2f7; color: #4a5568; font-size: 13px; }
+    .table-custom td { padding: 12px; border-bottom: 1px solid #edf2f7; font-size: 14px; color: #2d3748; }
+    .surat-row { cursor: pointer; transition: background 0.2s; }
+    .surat-row:hover { background: #f1f5f9; }
+
+    /* Modal Styling */
+    .modal { display:none; position:fixed; z-index:9999; inset:0; background:rgba(0,0,0,0.6); padding: 20px; overflow-y: auto; }
+    .modal-box { background:white; max-width:800px; margin: 20px auto; border-radius:12px; position:relative; overflow: hidden; }
+    
+    .paper-preview {
+        padding: 50px 60px;
+        font-family: 'Tinos', 'Times New Roman', Times, serif;
+        line-height: 1.6;
+        color: black;
+    }
+
+    @media (max-width: 992px) { .dashboard-grid { grid-template-columns: 1fr; } }
+</style>
+
+<div class="app-content">
+    <div style="margin-bottom: 25px;">
+        <h2 style="margin:0; color: var(--primary);">📊 Dashboard Admin</h2>
+        <p style="color: #64748b;">Ringkasan Sistem Layanan Madrasah Aliyah Kejuruan Negeri Ende.</p>
+    </div>
+
+    <div class="stats-container">
         <div class="stat-card">
             <i class="fas fa-file-alt"></i>
             <div>
@@ -31,7 +103,6 @@ $surat_masuk = mysqli_fetch_assoc(
                 <span><?= $total_surat ?></span>
             </div>
         </div>
-
         <div class="stat-card">
             <i class="fas fa-paper-plane"></i>
             <div>
@@ -39,286 +110,188 @@ $surat_masuk = mysqli_fetch_assoc(
                 <span><?= $surat_kirim ?></span>
             </div>
         </div>
-
         <div class="stat-card">
-            <i class="fas fa-users"></i>
+            <i class="fas fa-inbox"></i>
             <div>
                 <h4>Surat Masuk</h4>
-                <span><?= $surat_masuk?></span>
+                <span><?= $surat_masuk ?></span>
             </div>
         </div>
-
         <div class="stat-card">
             <i class="fas fa-comments"></i>
             <div>
-                <h4>Evaluasi Masuk</h4>
+                <h4>Evaluasi</h4>
                 <span><?= $evaluasi ?></span>
             </div>
         </div>
     </div>
 
-    <!-- SURAT TERBARU -->
-    <div class="card-box">
-        <h3>📄 Surat Masuk 
-            <a href="surat_masuk.php" style="float:right; font-size:13px; color:#007bff; text-decoration:none;">Lihat Semua →</a>
-        </h3>
-        <table width="100%" cellpadding="10">
+    <div class="dashboard-grid">
+<div class="card-box">
+    <h3>
+        <span><i class="fas fa-envelope text-primary"></i> Surat Masuk Terbaru</span>
+        <a href="surat_masuk.php" style="font-size:12px; color:var(--accent); text-decoration:none;">Lihat Semua →</a>
+    </h3>
+    <table class="table-custom">
+        <thead>
             <tr>
-                <th>Judul</th>
+                <th>Judul Surat</th>
                 <th>Pengirim</th>
                 <th>Tanggal</th>
-                <th>Status</th>
             </tr>
+        </thead>
+        <tbody>
             <?php
-            $q = mysqli_query($conn,"
-                SELECT sp.id, sp.judul, u.nama, sp.tanggal, sp.status, sp.isi
-                FROM surat_pribadi sp
-                INNER JOIN users u ON sp.id_orangtua = u.id
-                ORDER BY sp.id DESC
-                LIMIT 5
-            ");
-            if(mysqli_num_rows($q) > 0) {
-            while($d=mysqli_fetch_assoc($q)){
-                $isi = htmlspecialchars($d['isi']);
-                $nama = htmlspecialchars($d['nama']);
-                echo "
-                <tr class='rowSuratMasuk' onclick='previewSuratMasuk({$d['id']}, \"{$d['judul']}\", \"{$nama}\", \"{$d['tanggal']}\", \"{$isi}\")' style='cursor:pointer;'>
-                    <td>{$d['judul']}</td>
-                    <td>{$nama}</td>
-                    <td>{$d['tanggal']}</td>
-                    <td>{$d['status']}</td>
-                </tr>";
-            }} else {
-                echo "<tr><td colspan='4' style='text-align:center; color:#999; padding:20px;'>Belum ada surat masuk</td></tr>";
-            }
+            $q_masuk = mysqli_query($conn,"SELECT sp.id, sp.judul, u.nama, sp.tanggal, sp.status, sp.isi 
+                                         FROM surat_pribadi sp 
+                                         INNER JOIN users u ON sp.id_orangtua = u.id 
+                                         ORDER BY sp.id DESC LIMIT 5");
+            if(mysqli_num_rows($q_masuk) > 0) {
+                while($d=mysqli_fetch_assoc($q_masuk)){
+                    // Membersihkan karakter aneh agar tidak merusak JS
+                    $isi_clean = str_replace(array("\r", "\n"), ' ', htmlspecialchars($d['isi']));
+                    $nama_clean = htmlspecialchars($d['nama']);
+                    $judul_clean = htmlspecialchars($d['judul']);
+                    
+                    echo "<tr class='surat-row' onclick=\"previewSuratMasuk('{$judul_clean}', '{$nama_clean}', '{$d['tanggal']}', '{$isi_clean}')\">
+                            <td><strong>{$d['judul']}</strong></td>
+                            <td>{$nama_clean}</td>
+                            <td style='color:#64748b;'>".date('d M Y', strtotime($d['tanggal']))."</td>
+                          </tr>";
+                }
+            } else { echo "<tr><td colspan='3' align='center'>Belum ada surat masuk</td></tr>"; }
             ?>
-        </table>
-    </div>
-    <div class="card-box">
-        <h3>📄 Surat Keluar</h3>
-        <table width="100%" cellpadding="10">
+        </tbody>
+    </table>
+</div>
+
+<div class="card-box">
+    <h3>
+        <span><i class="fas fa-paper-plane text-success"></i> Surat Keluar Terbaru</span>
+        <a href="surat.php" style="font-size:12px; color:var(--accent); text-decoration:none;">Lihat Semua →</a>
+    </h3>
+    <table class="table-custom">
+        <thead>
             <tr>
-                <th>Judul</th>
+                <th>Judul Surat</th>
                 <th>Tujuan</th>
-                <th>Tanggal</th>
                 <th>Status</th>
             </tr>
+        </thead>
+        <tbody>
             <?php
-            $q = mysqli_query($conn,"
-                SELECT id, judul, tujuan, tanggal, status, isi
-                FROM surat
-                ORDER BY id DESC
-                LIMIT 5
-            ");
-            if(mysqli_num_rows($q) > 0) {
-            while($d=mysqli_fetch_assoc($q)){
-                $isi = htmlspecialchars($d['isi']);
-                echo "
-                <tr class='rowSuratKeluar' onclick='previewSuratKeluar({$d['id']}, \"{$d['judul']}\", \"{$d['tujuan']}\", \"{$d['tanggal']}\", \"{$isi}\")' style='cursor:pointer;'>
-                    <td>{$d['judul']}</td>
-                    <td>{$d['tujuan']}</td>
-                    <td>{$d['tanggal']}</td>
-                    <td>{$d['status']}</td>
-                </tr>";
-            }} else {
-                echo "<tr><td colspan='4' style='text-align:center; color:#999; padding:20px;'>Belum ada surat keluar</td></tr>";
-            }
+            $q_keluar = mysqli_query($conn,"SELECT id, judul, tujuan, tanggal, status, isi FROM surat ORDER BY id DESC LIMIT 5");
+            if(mysqli_num_rows($q_keluar) > 0) {
+                while($d=mysqli_fetch_assoc($q_keluar)){
+                    $isi_clean = str_replace(array("\r", "\n"), ' ', htmlspecialchars($d['isi']));
+                    $tujuan_clean = htmlspecialchars($d['tujuan']);
+                    $judul_clean = htmlspecialchars($d['judul']);
+                    $stClass = ($d['status'] == 'terkirim') ? 'color: #16a34a; background: #dcfce7;' : 'color: #92400e; background: #fef3c7;';
+                    
+                    echo "<tr class='surat-row' onclick=\"previewSuratKeluar('{$judul_clean}', '{$tujuan_clean}', '{$d['tanggal']}', '{$isi_clean}')\">
+                            <td><strong>{$d['judul']}</strong></td>
+                            <td>{$tujuan_clean}</td>
+                            <td><span style='padding:2px 8px; border-radius:10px; font-size:11px; {$stClass}'>{$d['status']}</span></td>
+                          </tr>";
+                }
+            } else { echo "<tr><td colspan='3' align='center'>Belum ada surat keluar</td></tr>"; }
             ?>
-        </table>
-    </div>
-
-    <!-- EVALUASI -->
-    <div class="card-box">
-        <h3>💬 Pesan Evaluasi Terbaru</h3>
-        <?php
-        $e = mysqli_query($conn,"
-            SELECT pesan, tanggal
-            FROM evaluasi
-            ORDER BY id DESC
-            LIMIT 3
-        ");
-        while($d=mysqli_fetch_assoc($e)){
-            echo "
-            <div style='margin-bottom:12px'>
-                <small style='color:#888'>{$d['created_at']}</small>
-                <p>“{$d['pesan']}”</p>
-            </div>";
-        }
-        ?>
-    </div>
-
+        </tbody>
+    </table>
 </div>
+    </div>
 
-<!-- MODAL PREVIEW SURAT MASUK -->
 <div class="modal" id="modalSuratMasuk">
-    <div class="modal-box surat" style="max-width:800px; max-height:90vh; overflow-y:auto;">
-        <h3 style="text-align:right; margin-top:-10px;">
-            <button type="button" onclick="closeSuratMasuk()" style="background:none; border:none; font-size:24px; cursor:pointer; color:#999;">&times;</button>
-        </h3>
-
-        <!-- KOP SURAT -->
-        <div style="text-align: center; margin-bottom: 20px;">
-            <h3 style="margin: 5px 0; font-size: 14px; font-weight: bold;">KEMENTERIAN AGAMA REPUBLIK INDONESIA</h3>
-            <h4 style="margin: 5px 0; font-size: 13px; font-weight: bold;">MADRASAH ALIYAH KEJURUAN NEGERI ENDE</h4>
-            <p style="margin: 5px 0; font-size: 11px;">Alamat Madrasah · Telp · Email</p>
-            <hr style="margin: 10px 0;">
+    <div class="modal-box">
+        <div style="background:var(--primary); color:white; padding:15px; display:flex; justify-content:space-between;">
+            <span><i class="fas fa-envelope"></i> Detail Surat Masuk</span>
+            <span onclick="closeSuratMasuk()" style="cursor:pointer;">&times;</span>
         </div>
-
-        <div style="padding:0 20px 20px 20px;">
-            <p>
-                Kepada Yth.<br>
-                <b>Kepala Madrasah / Wali Kelas</b><br>
-                <b>MAK Negeri Ende</b><br>
-                di Tempat
-            </p>
-
-            <p>Assalamu'alaikum Warahmatullahi Wabarakatuh</p>
-
-            <p>
-                Dengan hormat,<br>
-                Saya yang bertanda tangan di bawah ini, orang tua/wali dari siswa:
-            </p>
-
-            <table style="width:100%; margin-bottom:15px;">
-                <tr>
-                    <td>Nama Pengirim</td>
-                    <td>: <b id="modalPengirimNama"></b></td>
-                </tr>
-                <tr>
-                    <td>Tanggal</td>
-                    <td>: <b id="modalTanggalMasuk"></b></td>
-                </tr>
-            </table>
-
-            <p>
-                <b>Perihal: <span id="modalJudulMasuk"></span></b>
-            </p>
-
-            <p>Melalui surat ini saya ingin menyampaikan pesan sebagai berikut:</p>
-
-            <div id="modalIsiMasuk" style="border:1px solid #000; padding:10px; font-family:'Times New Roman', serif; min-height:100px; line-height:1.6; white-space:pre-wrap;"></div>
-
-            <p style="margin-top:20px;">
-                Demikian surat ini saya sampaikan. Atas perhatian Bapak/Ibu,
-                saya ucapkan terima kasih.
-            </p>
-
-            <p>Wassalamu'alaikum Warahmatullahi Wabarakatuh</p>
-
-            <br>
-
-            <p style="text-align:right; margin-top:30px;">
-                Hormat saya,<br><br><br>
-                <b id="modalPengirimTtd"></b><br>
-                (Wali Siswa)
-            </p>
-        </div>
-    </div>
-</div>
-
-<!-- MODAL PREVIEW SURAT KELUAR -->
-<div class="modal" id="modalSuratKeluar">
-    <div class="modal-box surat" style="max-width:800px; max-height:90vh; overflow-y:auto;">
-        <h3 style="text-align:right; margin-top:-10px;">
-            <button type="button" onclick="closeSuratKeluar()" style="background:none; border:none; font-size:24px; cursor:pointer; color:#999;">&times;</button>
-        </h3>
-
-        <!-- KOP SURAT -->
-        <div style="text-align: center; margin-bottom: 20px;">
-            <h3 style="margin: 5px 0; font-size: 14px; font-weight: bold;">KEMENTERIAN AGAMA REPUBLIK INDONESIA</h3>
-            <h4 style="margin: 5px 0; font-size: 13px; font-weight: bold;">MADRASAH ALIYAH KEJURUAN NEGERI ENDE</h4>
-            <p style="margin: 5px 0; font-size: 11px;">Alamat Madrasah · Telp · Email</p>
-            <hr style="margin: 10px 0;">
-        </div>
-
-        <div style="padding:0 20px 20px 20px;">
-            <table style="width:100%; margin-bottom:15px;">
-                <tr>
-                    <td width="60%">
-                        <strong>Nomor :</strong> <span id="modalNomorKeluar">-</span><br>
-                        <strong>Perihal :</strong> <span id="modalPerihalKeluar"></span>
-                    </td>
-                    <td align="right" style="vertical-align:top;">
-                        Ende, <span id="modalTanggalKeluar"></span>
-                    </td>
-                </tr>
-            </table>
-
-            <p>
-                Kepada Yth,<br>
-                <b id="modalTujuanKeluar"></b><br>
-                Di Tempat
-            </p>
-
-            <p style="text-align:justify;">
-                <div id="modalIsiKeluar" style="border:1px solid #000; padding:10px; font-family:'Times New Roman', serif; min-height:100px; line-height:1.6; white-space:pre-wrap;"></div>
-            </p>
-
-            <p style="margin-top:20px;">Demikian surat ini kami sampaikan. Atas perhatian Bapak/Ibu kami ucapkan terima kasih.</p>
-
-            <br><br>
-
-            <div style="text-align:right; margin-top:30px;">
-                <p>Hormat Kami,</p>
-                <br><br>
-                <b>Kepala Madrasah</b><br>
-                <u style="display:block; margin-top:30px;">(Nama Kepala Madrasah)</u>
+        <div class="paper-preview">
+            <div style="text-align:center; border-bottom: 2px solid #000; padding-bottom:10px; margin-bottom:20px;">
+                <h3 style="margin:0;">SURAT PEMBERITAHUAN WALI MURID</h3>
+                <p style="margin:0; font-size:12px;">MAK NEGERI ENDE</p>
             </div>
+            <p>Kepada Yth,<br><b>Bapak/Ibu Guru / Wali Kelas</b><br>di Tempat</p>
+            <p>Assalamu'alaikum Wr. Wb.</p>
+            <p>Yang bertanda tangan di bawah ini, Orang Tua/Wali dari siswa:</p>
+            <table style="margin-left:20px;">
+                <tr><td>Nama Pengirim</td><td>: <b id="modalPengirimNama"></b></td></tr>
+                <tr><td>Tanggal</td><td>: <span id="modalTanggalMasuk"></span></td></tr>
+                <tr><td>Perihal</td><td>: <u id="modalJudulMasuk"></u></td></tr>
+            </table>
+            <div id="modalIsiMasuk" style="margin:20px 0; min-height:100px; text-align:justify; white-space:pre-wrap; font-style:italic; border-left:3px solid #ddd; padding-left:15px;"></div>
+            <div style="float:right; text-align:center; width:200px;">
+                <p>Hormat Saya,</p>
+                <div style="height:60px;"></div>
+                <b id="modalPengirimTtd"></b>
+            </div>
+            <div style="clear:both;"></div>
         </div>
     </div>
 </div>
 
-<style>
-.rowSuratMasuk:hover,
-.rowSuratKeluar:hover {
-    background-color: #f5f5f5;
-}
-
-.surat {
-    font-family: 'Times New Roman', serif;
-    line-height: 1.4;
-}
-</style>
+<div class="modal" id="modalSuratKeluar">
+    <div class="modal-box">
+        <div style="background:#166534; color:white; padding:15px; display:flex; justify-content:space-between;">
+            <span><i class="fas fa-file-signature"></i> Detail Surat Keluar Resmi</span>
+            <span onclick="closeSuratKeluar()" style="cursor:pointer;">&times;</span>
+        </div>
+        <div class="paper-preview">
+            <div style="display:flex; align-items:center; border-bottom:3px double #000; padding-bottom:10px; margin-bottom:20px;">
+                <img src="../assets/logokemenag.png" style="width:70px; margin-right:15px;">
+                <div style="text-align:center; flex-grow:1;">
+                    <h4 style="margin:0; font-size:14px;">KEMENTERIAN AGAMA REPUBLIK INDONESIA</h4>
+                    <h3 style="margin:0; font-size:16px;">MADRASAH ALIYAH KEJURUAN NEGERI ENDE</h3>
+                    <p style="margin:0; font-size:10px; font-style:italic;">Jalan Raya Ende-Bajawa KM.21 Ende 86352</p>
+                </div>
+            </div>
+            <table width="100%">
+                <tr>
+                    <td width="60%">Perihal: <b id="modalPerihalKeluar"></b></td>
+                    <td align="right">Ende, <span id="modalTanggalKeluar"></span></td>
+                </tr>
+            </table>
+            <p>Kepada Yth,<br><b id="modalTujuanKeluar"></b><br>di Tempat</p>
+            <div id="modalIsiKeluar" style="margin:20px 0; min-height:150px; text-align:justify; white-space:pre-wrap;"></div>
+            <div style="float:right; text-align:center; width:200px;">
+                <p>Kepala Madrasah,</p>
+                <div style="height:60px;"></div>
+                <b>(____________________)</b>
+            </div>
+            <div style="clear:both;"></div>
+        </div>
+    </div>
+</div>
 
 <script>
-function previewSuratMasuk(id, judul, pengirim, tanggal, isi){
-    document.getElementById('modalJudulMasuk').textContent = judul;
-    document.getElementById('modalPengirimNama').textContent = pengirim;
-    document.getElementById('modalPengirimTtd').textContent = pengirim;
-    document.getElementById('modalTanggalMasuk').textContent = tanggal;
-    document.getElementById('modalIsiMasuk').textContent = isi;
+// Fungsi Preview Surat Masuk (Diterima dari Wali Murid)
+function previewSuratMasuk(judul, pengirim, tanggal, isi){
+    document.getElementById('modalJudulMasuk').innerText = judul;
+    document.getElementById('modalPengirimNama').innerText = pengirim;
+    document.getElementById('modalPengirimTtd').innerText = pengirim;
+    document.getElementById('modalTanggalMasuk').innerText = tanggal;
+    document.getElementById('modalIsiMasuk').innerText = isi;
     document.getElementById('modalSuratMasuk').style.display = 'block';
 }
 
-function closeSuratMasuk(){
-    document.getElementById('modalSuratMasuk').style.display = 'none';
-}
-
-function previewSuratKeluar(id, judul, tujuan, tanggal, isi){
-    document.getElementById('modalPerihalKeluar').textContent = judul;
-    document.getElementById('modalTujuanKeluar').textContent = tujuan;
-    document.getElementById('modalTanggalKeluar').textContent = tanggal;
-    document.getElementById('modalIsiKeluar').textContent = isi;
+// Fungsi Preview Surat Keluar (Surat Resmi Madrasah)
+function previewSuratKeluar(judul, tujuan, tanggal, isi){
+    document.getElementById('modalPerihalKeluar').innerText = judul;
+    document.getElementById('modalTujuanKeluar').innerText = tujuan;
+    document.getElementById('modalTanggalKeluar').innerText = tanggal;
+    document.getElementById('modalIsiKeluar').innerText = isi;
     document.getElementById('modalSuratKeluar').style.display = 'block';
 }
 
-function closeSuratKeluar(){
-    document.getElementById('modalSuratKeluar').style.display = 'none';
-}
+function closeSuratMasuk(){ document.getElementById('modalSuratMasuk').style.display = 'none'; }
+function closeSuratKeluar(){ document.getElementById('modalSuratKeluar').style.display = 'none'; }
 
-// Tutup modal jika klik di luar
+// Menutup modal jika user klik area di luar kotak modal
 window.onclick = function(event) {
-    const modalMasuk = document.getElementById('modalSuratMasuk');
-    const modalKeluar = document.getElementById('modalSuratKeluar');
-    if (event.target == modalMasuk) {
-        modalMasuk.style.display = 'none';
-    }
-    if (event.target == modalKeluar) {
-        modalKeluar.style.display = 'none';
+    if (event.target.className === 'modal') {
+        closeSuratMasuk();
+        closeSuratKeluar();
     }
 }
 </script>
-
-</div>
-</body>
-</html>

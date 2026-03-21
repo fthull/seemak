@@ -1,18 +1,34 @@
 <?php
+session_start();
 include '../conn.php';
 
-$id = $_GET['id'];
+if (!isset($_GET['id'])) {
+    echo json_encode(['error' => 'ID tidak ditemukan']);
+    exit;
+}
 
-$q = mysqli_query($conn,"SELECT * FROM surat WHERE id='$id'");
-$d = mysqli_fetch_assoc($q);
+$id = mysqli_real_escape_string($conn, $_GET['id']);
+$user_id = $_SESSION['id'];
 
-$data = [
-    "nomor"   => $d['nomor'],
-    "perihal" => $d['judul'],
-    "tujuan"  => $d['tujuan'],
-    "isi"     => $d['isi'],
-    "tanggal" => date('d F Y', strtotime($d['tanggal'])),
-    "ttd"     => "Kepala MAK Negeri Ende"
-];
+// Ambil ID orang tua terlebih dahulu
+$qOrtu = mysqli_query($conn, "SELECT id FROM orang_tua WHERE user_id='$user_id'");
+$dOrtu = mysqli_fetch_assoc($qOrtu);
+$id_orangtua = $dOrtu['id'];
 
-echo json_encode($data);
+// Ambil data surat berdasarkan ID dan pastikan milik orang tua tersebut
+$query = mysqli_query($conn, "
+    SELECT * FROM surat_wali 
+    WHERE id = '$id' AND id_orangtua = '$id_orangtua'
+");
+
+if (mysqli_num_rows($query) > 0) {
+    $data = mysqli_fetch_assoc($query);
+    
+    // Konversi baris baru (\n) menjadi <br> agar rapi di HTML
+    $data['isi'] = nl2br($data['isi']);
+    
+    echo json_encode($data);
+} else {
+    echo json_encode(['error' => 'Surat tidak ditemukan atau akses dilarang']);
+}
+?>
